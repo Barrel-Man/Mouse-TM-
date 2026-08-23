@@ -1,2 +1,7 @@
 mouse mvoes forwards and donesnt hit walls
 Simulate the walls?
+
+Micromouse must somehow figure out it has reached the end
+Then remember route there / find shortest route
+
+ideally if we can map the entirety of the maze this would be easier
