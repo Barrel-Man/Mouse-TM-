@@ -1,10 +1,15 @@
 import API
 import sys
-import time
 
 """
-Diagnosis: problem in current Mpath to Opath algorithm (try to find problem and 
-fix tmrw)
+Functions needing implementation:
+    API.wallLeft()
+    API.wallRight()
+    API.wallFront()
+
+    API.turnRight()
+    API.turnLeft()
+    API.moveForward() 
 """
 
 size_of_array = 16
