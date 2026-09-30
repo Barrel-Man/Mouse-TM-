@@ -1,25 +1,33 @@
 import API
 import sys
-import time
 
-"""
-Diagnosis: problem in current Mpath to Opath algorithm (try to find problem and 
-fix tmrw)
-"""
+# 5 for the test maze on the board, 16 for the MMS simulator.
+size_of_array = 16
 
-size_of_array = 5
+# Compass helpers: (dx, dy) for a step, and which way is left/right/behind.
+STEP = {'n': (0, 1), 'e': (1, 0), 's': (0, -1), 'w': (-1, 0)}
+OPPOSITE = {'n': 's', 's': 'n', 'e': 'w', 'w': 'e'}
+LEFT_OF = {'n': 'w', 'w': 's', 's': 'e', 'e': 'n'}
+RIGHT_OF = {'n': 'e', 'e': 's', 's': 'w', 'w': 'n'}
 
 
 def log(string):
     sys.stderr.write("{}\n".format(string))
     sys.stderr.flush()
 
+
 def initialise_maze():
-    # Initialisation
     global maze, pathO, pathM
-    maze = [[{"distanceO" : 0, "distanceM" : 0, "e" : x == size_of_array - 1, "w" : x == 0, "n" : y == size_of_array - 1, "s" : y == 0, "stepped": False, "explored" : False} for y in range(size_of_array)] for x in range(size_of_array)]    
-    pathO = pathM = []
-    
+    maze = [[{"distanceO": 0, "distanceM": 0,
+              "e": x == size_of_array - 1, "w": x == 0,
+              "n": y == size_of_array - 1, "s": y == 0,
+              "stepped": False, "explored": False}
+             for y in range(size_of_array)] for x in range(size_of_array)]
+    # FIX: was `pathO = pathM = []`, which makes both names point at the SAME
+    # list, so popping pathM (in move) silently edited pathO too.
+    pathO = []
+    pathM = []
+
 
 def output_graphics():
     global maze, pathO, pathM
@@ -29,105 +37,49 @@ def output_graphics():
             API.setText(x, y, maze[x][y]["distanceO"])
     for x in range(len(maze)):
         for y in range(len(maze[x])):
-            if maze[x][y]["e"]:
-                API.setWall(x, y, 'e')
-            if maze[x][y]["w"]:
-                API.setWall(x, y, 'w')
-            if maze[x][y]["n"]:
-                API.setWall(x, y, 'n')
-            if maze[x][y]["s"]:
-                API.setWall(x, y, 's')
-    
+            for d in 'ensw':
+                if maze[x][y][d]:
+                    API.setWall(x, y, d)
     for x1, y1 in pathO:
         API.setColor(x1, y1, 'a')
 
 
+def set_wall(x, y, d, present):
+    """Record a wall on side d of cell (x, y) AND on the neighbour's matching
+    side. Returns True if this changed what we knew. The outer boundary is
+    always a wall, so a sensor reading can never open it."""
+    dx, dy = STEP[d]
+    nx, ny = x + dx, y + dy
+    if not (0 <= nx < size_of_array and 0 <= ny < size_of_array):
+        return False
+    changed = maze[x][y][d] != present
+    maze[x][y][d] = present
+    maze[nx][ny][OPPOSITE[d]] = present
+    return changed
+
+
 def check_surroundings(x, y, orientation) -> bool:
-    global maze, pathO
+    """Look left/right/front and update the map. True if a wall changed."""
+    # FIX: only sense a cell the first time we are in it. Re-sensing every
+    # visit let one noisy ToF reading overwrite a wall we already knew, which
+    # could seal the goal off (-> infinite loop) or open a wall that is there.
+    if maze[x][y]['explored']:
+        return False
     wall_left = API.wallLeft()
     wall_right = API.wallRight()
     wall_front = API.wallFront()
     new_wall = False
-
-    if orientation == 's':
-        if maze[x][y]['e'] != wall_left:
-            maze[x][y]['e'] = wall_left
-            new_wall = True
-        if x != size_of_array - 1:
-            maze[x+1][y]['w'] = wall_left
-
-        if maze[x][y]['w'] !=  wall_right:
-            maze[x][y]['w'] = wall_right
-            new_wall = True
-        if x != 0:
-            maze[x-1][y]['e'] = wall_right
-
-        if maze[x][y]['s'] != wall_front:
-            maze[x][y]['s'] = wall_front
-            new_wall = True
-        if y != 0:
-            maze[x][y-1]['n'] = wall_front
-            
-        
-    if orientation == 'w':
-        if maze[x][y]['s'] != wall_left:
-            maze[x][y]['s'] = wall_left
-            new_wall = True
-        if y != 0:
-            maze[x][y-1]['n'] = wall_left
-
-        if maze[x][y]['n'] != wall_right:
-            maze[x][y]['n'] = wall_right
-            new_wall = True
-        if y !=  size_of_array - 1:
-            maze[x][y+1]['s'] = wall_right
-
-        if maze[x][y]['w'] != wall_front:
-            maze[x][y]['w'] = wall_front
-            new_wall = True
-        if x != 0:
-            maze[x-1][y]['e'] = wall_front
-        
-    if orientation == 'n':
-        if maze[x][y]['w'] != wall_left:
-            maze[x][y]['w'] = wall_left
-            new_wall = True
-        if x != 0:
-            maze[x-1][y]['e'] = wall_left
-
-        if maze[x][y]['e'] != wall_right:
-            maze[x][y]['e'] = wall_right
-            new_wall = True
-        if x != size_of_array - 1:
-            maze[x+1][y]['w'] = wall_right
-
-        if maze[x][y]['n'] != wall_front:
-            maze[x][y]['n'] = wall_front
-            new_wall = True
-        if y != size_of_array -1:
-            maze[x][y+1]['s'] = wall_front
-        
-    if orientation == 'e':
-        if maze[x][y]['n'] != wall_left:
-            maze[x][y]['n'] = wall_left
-            new_wall = True
-        if y != size_of_array - 1:
-            maze[x][y+1]['s'] = wall_left
-
-        if maze[x][y]['s'] != wall_right:
-            maze[x][y]['s'] = wall_right
-            new_wall = True
-        if y != 0:
-            maze[x][y-1]['n'] = wall_right
-
-        if maze[x][y]['e'] != wall_front:
-            maze[x][y]['e'] = wall_front
-            new_wall = True
-        if x != size_of_array - 1:
-            maze[x+1][y]['w'] = wall_front
+    new_wall |= set_wall(x, y, LEFT_OF[orientation], wall_left)
+    new_wall |= set_wall(x, y, RIGHT_OF[orientation], wall_right)
+    new_wall |= set_wall(x, y, orientation, wall_front)
     return new_wall
 
-def update_distances(Mouse = False, x=0, y=0):
+
+def update_distances(Mouse=False, x=0, y=0):
+    """Flood fill. Mouse=False: distance from the start, until the goal is
+    reached (distanceO). Mouse=True: distance from (x, y), until an
+    unexplored cell of the current best path is reached (distanceM).
+    Returns False if nothing it was looking for can be reached."""
     global maze, size_of_array, pathO, pathM
     for a in range(len(maze)):
         for b in range(len(maze[0])):
@@ -137,7 +89,7 @@ def update_distances(Mouse = False, x=0, y=0):
         for a, b in pathO:
             maze[a][b]["distanceM"] = 0
     else:
-        Mouse_distance =  False
+        Mouse_distance = False
 
     stop_finding = False
     steps_out = 0
@@ -145,23 +97,19 @@ def update_distances(Mouse = False, x=0, y=0):
     maze[x][y]["stepped"] = True
     next_step = []
     x_half = y_half = size_of_array // 2
-    while not stop_finding:
-        done = []
+    # FIX: also stop when the frontier is empty. Before, if the goal was
+    # unreachable (e.g. one wall misread) this loop never ended.
+    while not stop_finding and current_step:
         for x1, y1 in current_step:
-            
             if Mouse_distance:
                 maze[x1][y1]["distanceM"] = steps_out
                 if (x1, y1) in pathO and not maze[x1][y1]['explored']:
                     stop_finding = True
-                    x_final, y_final = x1,y1
             else:
                 maze[x1][y1]["distanceO"] = steps_out
                 if (x1, y1) == (x_half, y_half):
                     stop_finding = True
-                    x_final, y_final = x_half, y_half
 
-                    
-            done.append((x1,y1))
             if y1 != size_of_array - 1:
                 if not (maze[x1][y1]["n"] or maze[x1][y1+1]["stepped"]):
                     maze[x1][y1+1]["stepped"] = True
@@ -180,81 +128,61 @@ def update_distances(Mouse = False, x=0, y=0):
                     next_step.append((x1 - 1, y1))
 
         current_step = next_step
-        next_step = [] 
+        next_step = []
         steps_out += 1
-    for (a,b) in current_step:
-        if (a, b) != (x_final, y_final):
-            maze[a][b]["stepped"] = False
-        
+    # Cells in the last frontier were marked but never given a distance.
+    for (a, b) in current_step:
+        maze[a][b]["stepped"] = False
+    return stop_finding
 
 
 def find_path(Mouse=False, x=0, y=0):
-    global pathO, pathM, maze, testing
+    """Walk downhill through the flood-fill numbers to build a path.
+    Path is stored target -> ... -> start (Mouse: target -> ... -> mouse)."""
+    global pathO, pathM, maze
+    key = "distanceM" if Mouse else "distanceO"
     if Mouse:
-        if (x, y) in pathO and not maze[x][y]["explored"]:
-            pathM = pathO[:pathO.index((x,y))+1]
-            return
-        min_distance = 0
-        for tuple in pathO:
-            x2, y2 = tuple
-            distance_point = maze[x2][y2]["distanceM"]
-            if distance_point != 0:
-                if (not min_distance or distance_point < min_distance) and not maze[x2][y2]["explored"]:
-                    min_distance = distance_point
-                    x1, y1 = x2, y2
-        path = []
-        current_score = maze[x1][y1]["distanceM"]
-
-                
+        best = None
+        for cell in pathO:
+            x2, y2 = cell
+            d = maze[x2][y2]["distanceM"]
+            if d != 0 and not maze[x2][y2]["explored"]:
+                if best is None or d < best[0]:
+                    best = (d, x2, y2)
+        if best is None:
+            pathM = []
+            return False
+        x1, y1 = best[1], best[2]
     else:
         x1 = y1 = size_of_array // 2
-        path = []
-        current_score = maze[x1][y1]["distanceO"]
-        
+
+    path = []
+    current_score = maze[x1][y1][key]
     while current_score != -1:
-
-        tuple = (x1, y1)
-        path.append(tuple)
-
-        if x1 != 0:
-            if Mouse:
-                left = maze[x1-1][y1]["distanceM"]
-            else:
-                left = maze[x1-1][y1]["distanceO"]
-            if left == current_score - 1 and \
-                not maze[x1][y1]['w'] and maze[x1-1][y1]["stepped"]:
-                x1 -= 1
-        if y1 != 0:
-            if Mouse:
-                down = maze[x1][y1-1]["distanceM"]
-            else:
-                down = maze[x1][y1-1]["distanceO"]            
-            if down == current_score - 1 and \
-                not maze[x1][y1]['s'] and maze[x1][y1-1]["stepped"]:
-                y1 -= 1
-        if x1 != size_of_array - 1:
-            if Mouse:
-                right = maze[x1+1][y1]["distanceM"]
-            else:
-                right = maze[x1+1][y1]["distanceO"]
-            if right == current_score - 1 and \
-                not maze[x1][y1]['e'] and maze[x1+1][y1]["stepped"]:
-                x1 += 1
-        if y1 != size_of_array - 1:
-            if Mouse:
-                up = maze[x1][y1+1]["distanceM"]
-            else:
-                up = maze[x1][y1+1]["distanceO"]
-            if up == current_score - 1 and \
-                not maze[x1][y1]['n'] and maze[x1][y1+1]["stepped"]:
-                y1 += 1
+        path.append((x1, y1))
+        # FIX: pick ONE neighbour per step (was four separate `if`s that could
+        # each move the cursor again, using the already-updated x1/y1).
+        moved = False
+        for d in 'wsen':
+            dx, dy = STEP[d]
+            nx, ny = x1 + dx, y1 + dy
+            if not (0 <= nx < size_of_array and 0 <= ny < size_of_array):
+                continue
+            if (maze[nx][ny][key] == current_score - 1
+                    and not maze[x1][y1][d] and maze[nx][ny]["stepped"]):
+                x1, y1 = nx, ny
+                moved = True
+                break
+        if not moved and current_score != 0:
+            return False  # map is inconsistent; don't spin forever
         current_score -= 1
     if Mouse:
         pathM = path
     else:
         pathO = path
+    return True
 
-        
+
 def move(x, y, orientation) -> tuple:
     global pathM
     if len(pathM) > 1:
@@ -262,8 +190,9 @@ def move(x, y, orientation) -> tuple:
     else:
         x1 = x
         y1 = y
-    pathM.pop()
-    
+    if pathM:
+        pathM.pop()
+
     if x1 == x + 1:
         if orientation == 'n':
             API.turnRight()
@@ -282,7 +211,7 @@ def move(x, y, orientation) -> tuple:
             API.turnLeft()
         if orientation == 'n':
             API.turnLeft()
-        API.moveForward()   
+        API.moveForward()
         orientation = 'w'
     if y1 == y + 1:
         if orientation == 'w':
@@ -305,43 +234,54 @@ def move(x, y, orientation) -> tuple:
         API.moveForward()
         orientation = 's'
     return (x1, y1, orientation)
-    
+
 
 def main():
-    # Initialisation
-    global pathO, pathM, maze, max_depth
+    global pathO, pathM, maze
     initialise_maze()
     x = y = 0
     orientation = 'n'
-    explored_maze = False
+
+    # FIX: plan BEFORE the first look. Before, the first path was only made
+    # if the start cell revealed a wall; if it didn't (both sides open), pathO
+    # stayed [] which counts as "everything explored" and the mouse never moved.
+    update_distances()
+    find_path()
     output_graphics()
-    t=0
-    while not explored_maze:
+
+    t = 0
+    while True:
         new_wall = check_surroundings(x, y, orientation)
-        log(f"check-surr {t}")
-        output_graphics()
         if new_wall:
-            update_distances()
-            log(f"O-distance {t}")
-            find_path()
-            log(f"O-path {t}")
-        current_explored = maze[x][y]['explored']
+            if not update_distances() or not find_path():
+                log("goal unreachable in map - a wall was probably misread")
+                API.ackReset()
+                return
+            output_graphics()
+
+        first_visit = not maze[x][y]['explored']
         maze[x][y]['explored'] = True
-        explored_maze =  True
-        for x1, y1 in pathO:
-            if not maze[x1][y1]['explored']:
-                explored_maze = False
-                break
-        if explored_maze:
+
+        if all(maze[a][b]['explored'] for a, b in pathO):
             break
-        if not current_explored:
+
+        # FIX: re-plan the mouse's route whenever the map changed OR this is a
+        # new cell. (Before it only re-planned on a new cell, so a wall found
+        # on a revisit left the mouse following a route through that wall.)
+        if first_visit or new_wall:
             update_distances(True, x, y)
-            log(f"M-distance {t}")
-            find_path(True, x, y)
-            log(f"M-path {t}")
+            if not find_path(True, x, y):
+                log("no route to an unexplored cell")
+                API.ackReset()
+                return
+        if len(pathM) < 2:
+            log("mouse path empty")
+            API.ackReset()
+            return
         x, y, orientation = move(x, y, orientation)
-        t+=1
-    API.ackReset() 
+        t += 1
+
+    API.ackReset()
     x = y = 0
     orientation = 'n'
     pathM = pathO.copy()
