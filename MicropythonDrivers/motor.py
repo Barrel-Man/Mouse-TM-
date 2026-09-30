@@ -66,14 +66,15 @@ class Motor():
         limited_power = self.constrain(power, 0, 255)
         self.spin_power(limited_power * -1)
         
+"""
     def spin_power(self, power):
-        """
+        
         Runs the motor to a specified speed with a direction given between -255 and 255.
         Negative power runs the motor backwards.
 
         Parameters:
             power (int): Desired power to run the motor at. [-255, 255]
-        """
+    
         limited_power = self.constrain(power, -255, 255)
         if (limited_power > 0) ^ self._invert:
             self.m2.duty_u16(limited_power * 257)
@@ -81,7 +82,27 @@ class Motor():
         else:
             self.m1.duty_u16(limited_power * 257)
             self.m2.duty_u16(0)
-
+"""
+        
+            
+    def spin_power(self, power):
+        """
+        Runs the motor to a specified speed with a direction given between -255 and 255.
+        Negative power runs the motor backwards.
+ 
+        Parameters:
+            power (int): Desired power to run the motor at. [-255, 255]
+        """
+        limited_power = self.constrain(int(power), -255, 255)
+        duty = abs(limited_power) * 257
+        if (limited_power > 0) ^ self._invert:
+            self.m2.duty_u16(duty)
+            self.m1.duty_u16(0)
+        else:
+            self.m1.duty_u16(duty)
+            self.m2.duty_u16(0)
+            
+    
     def spin_stop(self):
         """
         Turns off the motor.
@@ -103,3 +124,9 @@ class Motor():
         Toggles the default direction for the motor
         """
         self._invert = not self._invert
+        
+    def encoder_reset(self):
+        """
+        Sets the encoder tick count back to zero.
+        """
+        self._encoder.reset()

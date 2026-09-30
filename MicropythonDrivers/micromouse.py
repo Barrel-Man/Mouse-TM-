@@ -207,3 +207,4 @@ class Micromouse():
         Toggles the invert direction of motor 2
         """
         self.motor_2.invert_motor()
+ 
