@@ -35,7 +35,7 @@ right_motor._invert = False
 pid = PID(kp, ki, kd, base_speed//2)
 walls = Walls(left_i2c, front_i2c, right_i2c, pid, center_mm, wall_mm)
  
-left, front, right = 2, 1, 0
+left, front, right = 0, 1, 2
  
 moving = False
 stop_flag = False
@@ -50,7 +50,7 @@ def _correction():
         est.append(center_mm - r)
     if not est:
         return 0
-    return pid.update(sum(est) / len(est))
+    return - pid.update(sum(est) / len(est))
  
 # Motor helper stuff
 def stop():
@@ -103,7 +103,7 @@ def check_far():
  
 def check_close():
     d = _dist(front)
-    if d is not None and d < 70:
+    if d is not None and d < 77:
         time.sleep_ms(100)
         left_motor._invert = True
         right_motor._invert = True
@@ -119,7 +119,7 @@ def moveForward(distance = 1):
     global moving, stop_flag
     for i in range(distance):
         cell_mm = 160
-        mm_per_sec = 45
+        mm_per_sec = 51
         move_ms = int(cell_mm / mm_per_sec * 1000)
  
         pid.reset()
@@ -140,8 +140,6 @@ def moveForward(distance = 1):
  
 # Walls
 def _wall_seen(i, limit):
-    # Majority vote over several readings; the mouse is stopped here, so the
-    # extra ~30 ms per reading costs nothing.
     votes = 0
     for _ in range(wall_samples):
         d = _dist(i)

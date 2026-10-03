@@ -2,7 +2,7 @@ import API
 import sys
 
 # 5 for the test maze on the board, 16 for the MMS simulator.
-size_of_array = 5
+size_of_array = 9
 
 # Compass helpers: (dx, dy) for a step, and which way is left/right/behind.
 STEP = {'n': (0, 1), 'e': (1, 0), 's': (0, -1), 'w': (-1, 0)}

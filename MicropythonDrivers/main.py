@@ -75,11 +75,51 @@ finally:
     LEFT_MOTOR.spin_stop()
     RIGHT_MOTOR.spin_stop()
 """
-import time
-import API             
-import AnActualStrat
 
+# import time
+# import API             
+# import AnActualStrat
+# 
+# 
+"""
+main.py - turn timing test.
+ 
+Does 4 right turns in a row. If turn_ms is right, the mouse ends up
+facing exactly the way it started (4 x 90 = 360).
+  ends short of where it started -> raise turn_ms
+  goes past where it started     -> lower turn_ms
+When it's right, copy turn_ms and turn_speed into API.py.
+"""
+
+# 
+# import time
+# import API
+# 
+# API.turn_speed = 150    # power to test
+# API.turn_ms = 610       # time to test for one 90 degree turn
+# 
+# try:
+#     time.sleep_ms(2000)     # hands off
+#     API.turnRight()
+#     print("turn done")
+# finally:
+#     API.stop()
+#  
+# # to run the maze instead, delete everything above and use:
+# # import API
+# # import AnActualStrat
+# # try:
+# #     AnActualStrat.main()
+# # finally:
+# #     API.stop()
+
+import time
+import API
+import AnActualStrat
+ 
 try:
+         # hands off
     AnActualStrat.main()
+
 finally:
     API.stop()

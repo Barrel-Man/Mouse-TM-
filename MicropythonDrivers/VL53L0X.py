@@ -4,7 +4,7 @@ import utime
 from machine import Timer
 import time
 
-_IO_TIMEOUT = 1000
+_IO_TIMEOUT = 100
 _SYSRANGE_START = const(0x00)
 _EXTSUP_HV = const(0x89)
 _MSRC_CONFIG = const(0x60)
