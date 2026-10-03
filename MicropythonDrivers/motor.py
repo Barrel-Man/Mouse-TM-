@@ -66,7 +66,7 @@ class Motor():
         limited_power = self.constrain(power, 0, 255)
         self.spin_power(limited_power * -1)
         
-"""
+        """
     def spin_power(self, power):
         
         Runs the motor to a specified speed with a direction given between -255 and 255.
@@ -82,7 +82,7 @@ class Motor():
         else:
             self.m1.duty_u16(limited_power * 257)
             self.m2.duty_u16(0)
-"""
+        """
         
             
     def spin_power(self, power):

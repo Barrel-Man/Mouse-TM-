@@ -2,7 +2,7 @@ import API
 import sys
 
 # 5 for the test maze on the board, 16 for the MMS simulator.
-size_of_array = 16
+size_of_array = 5
 
 # Compass helpers: (dx, dy) for a step, and which way is left/right/behind.
 STEP = {'n': (0, 1), 'e': (1, 0), 's': (0, -1), 'w': (-1, 0)}
@@ -12,9 +12,7 @@ RIGHT_OF = {'n': 'e', 'e': 's', 's': 'w', 'w': 'n'}
 
 
 def log(string):
-    sys.stderr.write("{}\n".format(string))
-    sys.stderr.flush()
-
+    print(string)
 
 def initialise_maze():
     global maze, pathO, pathM
@@ -68,6 +66,7 @@ def check_surroundings(x, y, orientation) -> bool:
     wall_left = API.wallLeft()
     wall_right = API.wallRight()
     wall_front = API.wallFront()
+    print("walls L", wall_left, "F", wall_front, "R", wall_right)
     new_wall = False
     new_wall |= set_wall(x, y, LEFT_OF[orientation], wall_left)
     new_wall |= set_wall(x, y, RIGHT_OF[orientation], wall_right)
@@ -185,6 +184,7 @@ def find_path(Mouse=False, x=0, y=0):
 
 def move(x, y, orientation) -> tuple:
     global pathM
+    print("at", x, y, "facing", orientation, "path", pathM)
     if len(pathM) > 1:
         x1, y1 = pathM[-2]
     else:

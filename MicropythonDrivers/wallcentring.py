@@ -4,14 +4,21 @@ import VL53L0X
  
  
 def _start(i2c):
-    s = VL53L0X.VL53L0X(i2c)    # default address 0x29
-    s.start()                   # continuous ranging
-    return s
+    try:
+        s = VL53L0X.VL53L0X(i2c)    # default address 0x29
+        s.start()                   # continuous ranging
+        return s
+    except Exception as e:
+        print("tof init failed", i2c, e)
+        return None
  
  
 def _mm(sensor):
-    d = sensor.read()
-    return None if d >= 8000 else d   # 8190 etc = nothing in range
+    try:
+        d = sensor.read()
+    except Exception:
+        return None
+    return None if d >= 8000 else d
  
  
 class Walls:
