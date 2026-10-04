@@ -48,6 +48,9 @@ class Walls:
             self.pid.reset()
             self.walls = (left_wall, right_wall)
  
+        # Each visible wall estimates how far off-centre we are (mm).
+        # + = too close to the RIGHT wall (steer left). Average them.
+        # With both walls this is (left - right) / 2, so center cancels out.
         estimates = []
         if left_wall:
             estimates.append(self.left - self.center)
@@ -56,7 +59,7 @@ class Walls:
  
         if not estimates:
             self.error = 0
-            return 0 
+            return 0            # no walls: drive straight
  
         self.error = sum(estimates) / len(estimates)
         return self.pid.update(self.error)
