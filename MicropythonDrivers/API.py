@@ -9,9 +9,9 @@ ticks_per_cell = 20    # travling ticks
 ticks_per_90 = 520      # turning ticks
 base_speed = 80         # 0..255
 turn_speed = 150        # power used for turning on the spot
-turn_ms = 610           # how long a 90 degree turn spins for
-slow_ticks = 100        
-wall_samples = 3        
+turn_ms = 610           # how long a 90 degree turn spins for (tune with main.py)
+slow_ticks = 100           # drop to half speed this many ticks before the cell ends
+wall_samples = 3        # readings per wall check (majority vote) - one noisy read cannot corrupt the map
  
 kp, ki, kd = 0.901, 0.0, 0.375
 center_mm = 84          # side reading when centred
